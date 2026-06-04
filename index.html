@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bestune Booking</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="logos">
+        <img src="assets/bestune-logo.jpg" alt="Bestune">
+        <img src="assets/green-motors-logo.png" alt="Green Motors">
+      </div>
+      <div>
+        <p>Al Khalid Auto</p>
+        <h1>Bestune Booking</h1>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Main menu">
+      <button class="tab active" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="calendar">Calendar</button>
+      <button class="tab" data-view="bookings">Bookings</button>
+      <button class="tab" data-view="vins">VIN master</button>
+      <button class="tab" data-view="form">New booking</button>
+    </nav>
+
+    <main>
+      <section class="toolbar">
+        <input id="searchInput" type="search" placeholder="Search customer, VIN, phone, advisor">
+        <button id="loadMaster">Load master list</button>
+        <button id="exportBookings">Download bookings CSV</button>
+        <button id="exportVins">Download VIN CSV</button>
+      </section>
+
+      <section id="dashboardView" class="view active">
+        <div id="kpis" class="kpis"></div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Booking Calendar</h2>
+            <div class="month-nav">
+              <button id="prevMonth" aria-label="Previous month">&lt;</button>
+              <strong id="monthLabel"></strong>
+              <button id="nextMonth" aria-label="Next month">&gt;</button>
+            </div>
+          </div>
+          <div class="weekdays"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </section>
+        <section class="dashboard-grid">
+          <div class="panel">
+            <h2>Status analysis</h2>
+            <div class="chart-wrap">
+              <div id="statusChart" class="donut"></div>
+              <div id="statusLegend" class="legend"></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Assigned per advisor</h2>
+            <div id="advisorBars" class="bars"></div>
+          </div>
+        </section>
+      </section>
+
+      <section id="calendarView" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Bookings by date</h2>
+            <span id="calendarCount"></span>
+          </div>
+          <div id="calendarList" class="list"></div>
+        </section>
+      </section>
+
+      <section id="bookingsView" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Bookings</h2>
+            <button id="saveAll">Save all changes</button>
+          </div>
+          <div id="mobileBookingCards" class="mobile-booking-cards"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Customer</th>
+                  <th>Contact</th>
+                  <th>VIN</th>
+                  <th>Reg.</th>
+                  <th>Advisor</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="bookingRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="vinsView" class="view">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>VIN master</h2>
+            <span id="vinCount"></span>
+          </div>
+          <div id="vinRows" class="vin-list"></div>
+        </section>
+      </section>
+
+      <section id="formView" class="view">
+        <section class="panel">
+          <h2>Create booking</h2>
+          <form id="bookingForm" class="form-grid">
+            <label>Inquiry date<input name="inquiryDate" type="date" required></label>
+            <label>Customer name<input name="customerName" required></label>
+            <label>Contact number<input name="contactNumber" required></label>
+            <label>VIN / chassis<input name="chassisNumber" required></label>
+            <div id="vinWarning" class="warning wide" hidden></div>
+            <label>Registration<input name="registrationNumber"></label>
+            <label>Job<input name="job" value="Service" required></label>
+            <label>Service advisor<input name="serviceAdvisor" required></label>
+            <label>Booking date<input name="bookingDate" type="date" required></label>
+            <label>Booking time<input name="bookingTime" type="time" required></label>
+            <label>Payment mode
+              <select name="paymentMode" required>
+                <option value="">Select</option>
+                <option>Cash</option>
+                <option>Payment link</option>
+                <option>Card</option>
+                <option>Under service contract</option>
+              </select>
+            </label>
+            <label>Status
+              <select name="status">
+                <option>Booked</option>
+                <option>Confirmed</option>
+                <option>Arrived</option>
+                <option>Completed</option>
+                <option>Cancelled</option>
+                <option>Rescheduled</option>
+              </select>
+            </label>
+            <label class="wide">Remarks<textarea name="remarks" rows="3"></textarea></label>
+            <div class="wide form-actions">
+              <span id="formMessage"></span>
+              <button type="submit">Save booking</button>
+            </div>
+          </form>
+        </section>
+      </section>
+    </main>
+
+    <footer>
+      Static GitHub version. Changes are saved in this browser. Use CSV download to share the latest master file.
+    </footer>
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

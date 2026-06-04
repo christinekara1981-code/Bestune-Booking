@@ -4,6 +4,22 @@ const statusValues = ["Booked", "Confirmed", "Arrived", "Completed", "Cancelled"
 const paymentValues = ["Cash", "Payment link", "Card", "Under service contract"];
 const advisorValues = ["Heba", "Kaoutar", "Rana"];
 
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  appId: ""
+};
+const firebaseDataPath = "bestune-booking/bookings";
+
+const cloud = {
+  applyingRemote: false,
+  ready: false,
+  ref: null,
+  set: null
+};
+
 const state = {
   bookings: [],
   filtered: [],
@@ -29,7 +45,8 @@ const els = {
   vinCount: $("#vinCount"),
   form: $("#bookingForm"),
   formMessage: $("#formMessage"),
-  vinWarning: $("#vinWarning")
+  vinWarning: $("#vinWarning"),
+  syncStatus: $("#syncStatus")
 };
 
 function escapeHtml(value) {
@@ -64,6 +81,52 @@ function bySchedule(a, b) {
 
 function saveLocal() {
   localStorage.setItem(storageKey, JSON.stringify(state.bookings));
+  if (cloud.ready && !cloud.applyingRemote) {
+    cloud.set(cloud.ref, state.bookings).catch(() => setSyncStatus("Cloud save failed"));
+  }
+}
+
+function setSyncStatus(text) {
+  if (els.syncStatus) els.syncStatus.textContent = text;
+}
+
+function hasFirebaseConfig() {
+  return Boolean(firebaseConfig.apiKey && firebaseConfig.databaseURL && firebaseConfig.projectId && firebaseConfig.appId);
+}
+
+async function setupCloudSync() {
+  if (!hasFirebaseConfig()) {
+    setSyncStatus("Local mode");
+    return;
+  }
+  try {
+    setSyncStatus("Connecting...");
+    const appModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js");
+    const dbModule = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js");
+    const app = appModule.initializeApp(firebaseConfig);
+    const database = dbModule.getDatabase(app);
+    cloud.ref = dbModule.ref(database, firebaseDataPath);
+    cloud.set = dbModule.set;
+    cloud.ready = true;
+    dbModule.onValue(cloud.ref, (snapshot) => {
+      const remoteBookings = snapshot.val();
+      if (Array.isArray(remoteBookings)) {
+        cloud.applyingRemote = true;
+        state.bookings = remoteBookings;
+        localStorage.setItem(storageKey, JSON.stringify(state.bookings));
+        render();
+        cloud.applyingRemote = false;
+        setSyncStatus("Shared live data");
+        return;
+      }
+      if (!remoteBookings && state.bookings.length) {
+        cloud.set(cloud.ref, state.bookings);
+        setSyncStatus("Shared live data");
+      }
+    });
+  } catch {
+    setSyncStatus("Local mode");
+  }
 }
 
 function options(values, selected) {
@@ -185,11 +248,11 @@ function renderBookings() {
     <td><input class="table-input" data-field="bookingTime" type="time" value="${escapeHtml(booking.bookingTime)}"></td>
     <td><input class="table-input" data-field="customerName" value="${escapeHtml(booking.customerName)}"></td>
     <td><input class="table-input" data-field="contactNumber" value="${escapeHtml(booking.contactNumber)}"></td>
-    <td><input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"><button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}">Open VIN</button></td>
+    <td><input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"><button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">Open VIN</button></td>
     <td><input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></td>
     <td><select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></td>
     <td><select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></td>
-    <td><select class="table-input" data-field="status">${options(statusValues, booking.status)}</select><button class="save-row">Save</button><button class="delete-row">Delete</button><span class="row-message"></span></td>
+    <td><select class="table-input" data-field="status">${options(statusValues, booking.status)}</select><button class="save-row" type="button">Save</button><button class="delete-row" type="button">Delete</button><span class="row-message"></span></td>
   </tr>`).join("");
   els.mobileBookingCards.innerHTML = rows.map((booking) => `<article class="mobile-edit-card" data-id="${escapeHtml(booking.id)}">
     <div class="mobile-card-head">
@@ -201,13 +264,13 @@ function renderBookings() {
     <label>Customer<input class="table-input" data-field="customerName" value="${escapeHtml(booking.customerName)}"></label>
     <label>Contact<input class="table-input" data-field="contactNumber" value="${escapeHtml(booking.contactNumber)}"></label>
     <label>VIN<input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"></label>
-    <button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}">Open VIN</button>
+    <button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">Open VIN</button>
     <label>Registration<input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></label>
     <label>Advisor<select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></label>
     <label>Payment<select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></label>
     <label>Status<select class="table-input" data-field="status">${options(statusValues, booking.status)}</select></label>
-    <button class="save-row">Save booking</button>
-    <button class="delete-row">Delete booking</button>
+    <button class="save-row" type="button">Save booking</button>
+    <button class="delete-row" type="button">Delete booking</button>
     <span class="row-message"></span>
   </article>`).join("");
 }
@@ -222,14 +285,14 @@ function renderVins() {
         <p>${escapeHtml(vehicle.latest.customerName || "")} | ${escapeHtml(vehicle.latest.contactNumber || "-")} | Reg. ${escapeHtml(vehicle.latest.registrationNumber || "-")}</p>
         <span class="badge">${vehicle.total} service booking${vehicle.total === 1 ? "" : "s"}</span>
       </div>
-      <button class="delete-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}">Delete VIN</button>
+      <button class="delete-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}" type="button">Delete VIN</button>
     </div>
     ${vehicle.history.map((booking) => `<div class="history-row" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)} ${prettyTime(booking.bookingTime)}</strong>
       <span>${escapeHtml(booking.status || "-")}</span>
       <span>${escapeHtml(booking.serviceAdvisor || "-")}</span>
       <span>${escapeHtml(booking.paymentMode || "No payment mode")}</span>
-      <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks">Save remarks</button><button class="delete-history-row">Delete booking</button><span class="remarks-message"></span></div>
+      <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks" type="button">Save remarks</button><button class="delete-history-row" type="button">Delete booking</button><span class="remarks-message"></span></div>
     </div>`).join("")}
   </article>`).join("");
 }
@@ -374,6 +437,7 @@ async function load() {
   }
   render();
   showView(location.hash.replace("#", "") || "dashboard");
+  setupCloudSync();
 }
 
 function loadMasterList() {

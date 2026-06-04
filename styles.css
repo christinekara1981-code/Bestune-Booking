@@ -61,7 +61,7 @@ button, input, select, textarea { font: inherit; }
   z-index: 5;
 }
 
-.tab, .toolbar button, .panel-head button, form button, .save-row, .open-vin, .save-remarks {
+.tab, .toolbar button, .panel-head button, form button, .save-row, .open-vin, .save-remarks, .delete-row, .delete-vin, .delete-history-row {
   border: 0;
   background: #eef4e9;
   color: var(--ink);
@@ -73,6 +73,12 @@ button, input, select, textarea { font: inherit; }
 .tab.active, .toolbar button, form button, .save-row, .save-remarks {
   background: var(--green);
   color: #111;
+}
+
+.delete-row, .delete-vin, .delete-history-row {
+  background: #ffe7e0;
+  color: #9a2f17;
+  margin-top: 6px;
 }
 
 main { padding: 18px; }
@@ -227,6 +233,13 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   padding: 12px;
 }
 
+.vin-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
 .booking-card {
   display: grid;
   grid-template-columns: 150px 1fr 130px 110px;
@@ -311,6 +324,7 @@ footer {
   .tabs { padding: 8px 10px; }
   .tab { min-width: max-content; padding: 10px; }
   .kpis, .dashboard-grid, .chart-wrap, .form-grid, .history-row, .booking-card { grid-template-columns: 1fr; }
+  .vin-title-row { display: grid; }
   main { padding: 10px; }
   .panel, .kpi { padding: 12px; }
   .kpis { gap: 8px; }
@@ -322,7 +336,7 @@ footer {
   .table-wrap { display: none; }
   .mobile-booking-cards { display: grid; }
   .mobile-edit-card label { color: var(--muted); font-size: 13px; }
-  .save-row, .open-vin { min-height: 42px; }
+  .save-row, .open-vin, .delete-row, .delete-vin, .delete-history-row { min-height: 42px; }
   .vin-card { overflow-wrap: anywhere; }
   footer { padding: 14px 10px; }
 }

@@ -15,3 +15,7 @@ This folder is ready for GitHub Pages.
 This version is static, so it works on GitHub Pages without a server.
 
 Changes are saved in each user's browser using localStorage. Use `Load master list` to restore the full seeded master list, then use the `Download bookings CSV` and `Download VIN CSV` buttons to share the latest master data.
+
+Deletion password: `Bestune@2026`
+
+Because this is a static GitHub Pages app, the password is a light safeguard only. For stronger security, use a server-backed version.

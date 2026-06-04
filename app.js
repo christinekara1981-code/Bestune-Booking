@@ -1,6 +1,8 @@
 const storageKey = "bestuneBookingsGithub";
+const deletePassword = "Bestune@2026";
 const statusValues = ["Booked", "Confirmed", "Arrived", "Completed", "Cancelled", "Rescheduled"];
 const paymentValues = ["Cash", "Payment link", "Card", "Under service contract"];
+const advisorValues = ["Heba", "Kaoutar", "Rana"];
 
 const state = {
   bookings: [],
@@ -185,9 +187,9 @@ function renderBookings() {
     <td><input class="table-input" data-field="contactNumber" value="${escapeHtml(booking.contactNumber)}"></td>
     <td><input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"><button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}">Open VIN</button></td>
     <td><input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></td>
-    <td><input class="table-input" data-field="serviceAdvisor" value="${escapeHtml(booking.serviceAdvisor)}"></td>
+    <td><select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></td>
     <td><select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></td>
-    <td><select class="table-input" data-field="status">${options(statusValues, booking.status)}</select><button class="save-row">Save</button><span class="row-message"></span></td>
+    <td><select class="table-input" data-field="status">${options(statusValues, booking.status)}</select><button class="save-row">Save</button><button class="delete-row">Delete</button><span class="row-message"></span></td>
   </tr>`).join("");
   els.mobileBookingCards.innerHTML = rows.map((booking) => `<article class="mobile-edit-card" data-id="${escapeHtml(booking.id)}">
     <div class="mobile-card-head">
@@ -201,10 +203,11 @@ function renderBookings() {
     <label>VIN<input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"></label>
     <button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}">Open VIN</button>
     <label>Registration<input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></label>
-    <label>Advisor<input class="table-input" data-field="serviceAdvisor" value="${escapeHtml(booking.serviceAdvisor)}"></label>
+    <label>Advisor<select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></label>
     <label>Payment<select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></label>
     <label>Status<select class="table-input" data-field="status">${options(statusValues, booking.status)}</select></label>
     <button class="save-row">Save booking</button>
+    <button class="delete-row">Delete booking</button>
     <span class="row-message"></span>
   </article>`).join("");
 }
@@ -212,16 +215,21 @@ function renderBookings() {
 function renderVins() {
   const vehicles = vinMaster(state.filtered);
   els.vinCount.textContent = `${vehicles.length} unique VIN records`;
-  els.vinRows.innerHTML = vehicles.map((vehicle) => `<article class="vin-card">
-    <h2>${escapeHtml(vehicle.chassisNumber)}</h2>
-    <p>${escapeHtml(vehicle.latest.customerName || "")} | ${escapeHtml(vehicle.latest.contactNumber || "-")} | Reg. ${escapeHtml(vehicle.latest.registrationNumber || "-")}</p>
-    <span class="badge">${vehicle.total} service booking${vehicle.total === 1 ? "" : "s"}</span>
+  els.vinRows.innerHTML = vehicles.map((vehicle) => `<article class="vin-card" data-vin="${escapeHtml(vehicle.chassisNumber)}">
+    <div class="vin-title-row">
+      <div>
+        <h2>${escapeHtml(vehicle.chassisNumber)}</h2>
+        <p>${escapeHtml(vehicle.latest.customerName || "")} | ${escapeHtml(vehicle.latest.contactNumber || "-")} | Reg. ${escapeHtml(vehicle.latest.registrationNumber || "-")}</p>
+        <span class="badge">${vehicle.total} service booking${vehicle.total === 1 ? "" : "s"}</span>
+      </div>
+      <button class="delete-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}">Delete VIN</button>
+    </div>
     ${vehicle.history.map((booking) => `<div class="history-row" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)} ${prettyTime(booking.bookingTime)}</strong>
       <span>${escapeHtml(booking.status || "-")}</span>
       <span>${escapeHtml(booking.serviceAdvisor || "-")}</span>
       <span>${escapeHtml(booking.paymentMode || "No payment mode")}</span>
-      <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks">Save remarks</button><span class="remarks-message"></span></div>
+      <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks">Save remarks</button><button class="delete-history-row">Delete booking</button><span class="remarks-message"></span></div>
     </div>`).join("")}
   </article>`).join("");
 }
@@ -264,6 +272,38 @@ function saveBookingRow(row) {
 function saveAllRows() {
   const selector = matchMedia("(max-width: 780px)").matches ? "#mobileBookingCards .mobile-edit-card" : "#bookingRows tr";
   document.querySelectorAll(selector).forEach(saveBookingRow);
+}
+
+function confirmDeletePassword() {
+  const entered = prompt("Enter deletion password");
+  if (entered === null) return false;
+  if (entered !== deletePassword) {
+    alert("Incorrect password. Deletion cancelled.");
+    return false;
+  }
+  return true;
+}
+
+function deleteBooking(id) {
+  const booking = state.bookings.find((item) => item.id === id);
+  if (!booking) return;
+  if (!confirmDeletePassword()) return;
+  if (!confirm(`Delete booking for ${booking.customerName} / ${booking.chassisNumber}?`)) return;
+  state.bookings = state.bookings.filter((item) => item.id !== id);
+  saveLocal();
+  render();
+}
+
+function deleteVin(vin) {
+  const total = state.bookings.filter((booking) => booking.chassisNumber === vin).length;
+  if (!total) return;
+  if (!confirmDeletePassword()) return;
+  if (!confirm(`Delete VIN ${vin} and all ${total} booking record(s)?`)) return;
+  state.bookings = state.bookings.filter((booking) => booking.chassisNumber !== vin);
+  saveLocal();
+  els.search.value = "";
+  render();
+  showView("vins");
 }
 
 function addBooking(event) {
@@ -372,6 +412,7 @@ els.bookingRows.addEventListener("click", (event) => {
     showView("vins");
   }
   if (event.target.classList.contains("save-row")) saveBookingRow(row);
+  if (event.target.classList.contains("delete-row")) deleteBooking(row.dataset.id);
 });
 els.bookingRows.addEventListener("change", (event) => {
   if (!event.target.classList.contains("table-input")) return;
@@ -386,12 +427,21 @@ els.mobileBookingCards.addEventListener("click", (event) => {
     showView("vins");
   }
   if (event.target.classList.contains("save-row")) saveBookingRow(row);
+  if (event.target.classList.contains("delete-row")) deleteBooking(row.dataset.id);
 });
 els.mobileBookingCards.addEventListener("change", (event) => {
   if (!event.target.classList.contains("table-input")) return;
   event.target.closest(".mobile-edit-card").querySelector(".row-message").textContent = "Unsaved";
 });
 els.vinRows.addEventListener("click", (event) => {
+  if (event.target.classList.contains("delete-vin")) {
+    deleteVin(event.target.dataset.vin);
+    return;
+  }
+  if (event.target.classList.contains("delete-history-row")) {
+    deleteBooking(event.target.closest(".history-row").dataset.id);
+    return;
+  }
   if (!event.target.classList.contains("save-remarks")) return;
   const row = event.target.closest(".history-row");
   const booking = state.bookings.find((item) => item.id === row.dataset.id);

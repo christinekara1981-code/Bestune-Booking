@@ -122,7 +122,14 @@
             <div id="vinWarning" class="warning wide" hidden></div>
             <label>Registration<input name="registrationNumber"></label>
             <label>Job<input name="job" value="Service" required></label>
-            <label>Service advisor<input name="serviceAdvisor" required></label>
+            <label>Service advisor
+              <select name="serviceAdvisor" required>
+                <option value="">Select advisor</option>
+                <option>Heba</option>
+                <option>Kaoutar</option>
+                <option>Rana</option>
+              </select>
+            </label>
             <label>Booking date<input name="bookingDate" type="date" required></label>
             <label>Booking time<input name="bookingTime" type="time" required></label>
             <label>Payment mode

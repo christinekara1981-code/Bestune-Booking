@@ -25,9 +25,11 @@ const state = {
   filtered: [],
   view: "dashboard",
   calendarDate: new Date(2026, 5, 1),
-  selectedDate: ""
+  selectedDate: "",
+  lastRemoteSignature: ""
 };
 const apiMode = location.protocol.startsWith("http");
+const autoRefreshMs = 5000;
 
 const $ = (selector) => document.querySelector(selector);
 const els = {
@@ -114,6 +116,58 @@ async function removeBooking(id) {
 
 function setSyncStatus(text) {
   if (els.syncStatus) els.syncStatus.textContent = text;
+}
+
+function bookingsSignature(bookings) {
+  return JSON.stringify(bookings.map((booking) => ({
+    id: booking.id,
+    updatedAt: booking.updatedAt,
+    status: booking.status,
+    bookingDate: booking.bookingDate,
+    bookingTime: booking.bookingTime,
+    chassisNumber: booking.chassisNumber,
+    remarks: booking.remarks
+  })));
+}
+
+function userIsEditing() {
+  const active = document.activeElement;
+  if (active && ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName)) return true;
+  return [...document.querySelectorAll(".row-message, .remarks-message")].some((node) => node.textContent.trim() === "Unsaved");
+}
+
+async function refreshFromServer({ force = false } = {}) {
+  if (!apiMode) return;
+  if (!force && userIsEditing()) return;
+  try {
+    setSyncStatus("Refreshing...");
+    const response = await fetch("/api/bookings", { cache: "no-store" });
+    if (!response.ok) throw new Error("Refresh failed");
+    const remoteBookings = await response.json();
+    const signature = bookingsSignature(remoteBookings);
+    if (!force && signature === state.lastRemoteSignature) {
+      setSyncStatus("Shared live");
+      return;
+    }
+    state.bookings = remoteBookings;
+    state.lastRemoteSignature = signature;
+    render();
+    setSyncStatus("Shared live");
+  } catch {
+    setSyncStatus("Shared refresh failed");
+  }
+}
+
+async function manualRefresh() {
+  const button = $("#refreshData");
+  if (button) button.disabled = true;
+  await refreshFromServer({ force: true });
+  if (button) button.disabled = false;
+}
+
+function startAutoRefresh() {
+  if (!apiMode) return;
+  setInterval(() => refreshFromServer(), autoRefreshMs);
 }
 
 function hasFirebaseConfig() {
@@ -458,6 +512,7 @@ function exportVins() {
 async function load() {
   if (apiMode) {
     state.bookings = await (await fetch("/api/bookings")).json();
+    state.lastRemoteSignature = bookingsSignature(state.bookings);
   } else {
     const stored = localStorage.getItem(storageKey);
     state.bookings = stored ? JSON.parse(stored) : [...window.BESTUNE_MASTER_BOOKINGS];
@@ -471,11 +526,17 @@ async function load() {
   render();
   showView(location.hash.replace("#", "") || "dashboard");
   if (!apiMode) setupCloudSync();
+  startAutoRefresh();
 }
 
-function loadMasterList() {
+async function loadMasterList() {
   state.bookings = [...window.BESTUNE_MASTER_BOOKINGS];
-  saveLocal();
+  if (apiMode) {
+    for (const booking of state.bookings) await persistBooking(booking);
+    await refreshFromServer({ force: true });
+  } else {
+    saveLocal();
+  }
   els.search.value = "";
   state.selectedDate = "";
   render();
@@ -495,7 +556,8 @@ els.calendarGrid.addEventListener("click", (event) => {
 });
 els.search.addEventListener("input", render);
 $("#saveAll").addEventListener("click", () => saveAllRows().catch((error) => alert(error.message)));
-$("#loadMaster").addEventListener("click", loadMasterList);
+$("#refreshData").addEventListener("click", () => manualRefresh().catch((error) => alert(error.message)));
+$("#loadMaster").addEventListener("click", () => loadMasterList().catch((error) => alert(error.message)));
 $("#exportBookings").addEventListener("click", exportBookings);
 $("#exportVins").addEventListener("click", exportVins);
 els.form.addEventListener("submit", addBooking);
@@ -530,7 +592,7 @@ els.mobileBookingCards.addEventListener("change", (event) => {
   if (!event.target.classList.contains("table-input")) return;
   event.target.closest(".mobile-edit-card").querySelector(".row-message").textContent = "Unsaved";
 });
-els.vinRows.addEventListener("click", (event) => {
+els.vinRows.addEventListener("click", async (event) => {
   if (event.target.classList.contains("delete-vin")) {
     deleteVin(event.target.dataset.vin).catch((error) => alert(error.message));
     return;
@@ -544,7 +606,10 @@ els.vinRows.addEventListener("click", (event) => {
   const booking = state.bookings.find((item) => item.id === row.dataset.id);
   booking.remarks = row.querySelector(".remarks-input").value.trim();
   booking.updatedAt = new Date().toISOString();
-  persistBooking(booking).catch((error) => alert(error.message));
+  const saved = await persistBooking(booking);
+  const index = state.bookings.findIndex((item) => item.id === saved.id);
+  if (index !== -1) state.bookings[index] = saved;
+  state.lastRemoteSignature = bookingsSignature(state.bookings);
   row.querySelector(".remarks-message").textContent = "Saved";
   render();
   showView("vins");

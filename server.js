@@ -14,6 +14,7 @@ const pool = process.env.DATABASE_URL
   : null;
 let lastGoogleSheetsSync = "";
 let lastGoogleSheetsError = "";
+const pendingCreates = new Map();
 
 const columns = [
   "id", "inquiryDate", "customerName", "contactNumber", "chassisNumber",
@@ -137,6 +138,48 @@ async function saveBooking(booking) {
   return clean;
 }
 
+function bookingFingerprint(booking) {
+  return [
+    booking.inquiryDate,
+    booking.customerName,
+    booking.contactNumber,
+    booking.chassisNumber,
+    booking.registrationNumber,
+    booking.job,
+    booking.serviceAdvisor,
+    booking.bookingDate,
+    booking.bookingTime,
+    booking.status,
+    booking.paymentMode,
+    booking.remarks
+  ].map((value) => String(value || "").trim().toUpperCase()).join("|");
+}
+
+async function createBooking(booking) {
+  const clean = toDb(booking);
+  const fingerprint = bookingFingerprint(clean);
+  if (pendingCreates.has(fingerprint)) return pendingCreates.get(fingerprint);
+
+  const operation = (async () => {
+    const recentCutoff = Date.now() - 5 * 60 * 1000;
+    const duplicate = (await readBookings()).find((existing) => {
+      const createdAt = Date.parse(existing.createdAt || "");
+      return bookingFingerprint(existing) === fingerprint &&
+        Number.isFinite(createdAt) &&
+        createdAt >= recentCutoff;
+    });
+    if (duplicate) return duplicate;
+    return saveBooking(clean);
+  })();
+
+  pendingCreates.set(fingerprint, operation);
+  try {
+    return await operation;
+  } finally {
+    pendingCreates.delete(fingerprint);
+  }
+}
+
 async function deleteBooking(id) {
   if (pool) {
     await pool.query("delete from bookings where id = $1", [id]);
@@ -207,7 +250,7 @@ async function handleApi(req, res) {
   }
   if (req.method === "GET" && url.pathname === "/api/bookings") return sendJson(res, 200, await readBookings());
   if (req.method === "POST" && url.pathname === "/api/bookings") {
-    const saved = await saveBooking(await parseBody(req));
+    const saved = await createBooking(await parseBody(req));
     await syncGoogleSheetsSafe();
     return sendJson(res, 201, saved);
   }

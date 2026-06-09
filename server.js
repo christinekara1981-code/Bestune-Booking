@@ -7,9 +7,13 @@ const root = __dirname;
 const publicDir = path.join(root, "public");
 const dataPath = path.join(root, "data", "bookings.json");
 const port = Number(process.env.PORT || 8080);
+const googleSheetsUrl = String(process.env.GOOGLE_SHEETS_WEB_APP_URL || "").trim();
+const googleSheetsToken = String(process.env.GOOGLE_SHEETS_SYNC_TOKEN || "").trim();
 const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false } })
   : null;
+let lastGoogleSheetsSync = "";
+let lastGoogleSheetsError = "";
 
 const columns = [
   "id", "inquiryDate", "customerName", "contactNumber", "chassisNumber",
@@ -78,6 +82,42 @@ async function readBookings() {
     return rows.map((row) => row.data);
   }
   return JSON.parse(await fs.readFile(dataPath, "utf8"));
+}
+
+async function syncGoogleSheets() {
+  if (!googleSheetsUrl || !googleSheetsToken) return false;
+  const response = await fetch(googleSheetsUrl, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+    signal: AbortSignal.timeout(20000),
+    body: JSON.stringify({
+      token: googleSheetsToken,
+      syncedAt: new Date().toISOString(),
+      bookings: await readBookings()
+    })
+  });
+  const responseText = await response.text();
+  if (!response.ok) throw new Error(`Google Sheets returned ${response.status}: ${responseText}`);
+  let result;
+  try {
+    result = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Google Sheets returned an invalid response: ${responseText.slice(0, 200)}`);
+  }
+  if (!result.ok) throw new Error(result.error || "Google Sheets sync failed");
+  lastGoogleSheetsSync = new Date().toISOString();
+  lastGoogleSheetsError = "";
+  return true;
+}
+
+async function syncGoogleSheetsSafe() {
+  try {
+    return await syncGoogleSheets();
+  } catch (error) {
+    lastGoogleSheetsError = error.message;
+    console.error("Google Sheets sync failed:", error.message);
+    return false;
+  }
 }
 
 async function saveBooking(booking) {
@@ -156,16 +196,38 @@ async function serveStatic(req, res) {
 
 async function handleApi(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  if (req.method === "GET" && url.pathname === "/api/health") return sendJson(res, 200, { ok: true, database: Boolean(pool) });
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    return sendJson(res, 200, {
+      ok: true,
+      database: Boolean(pool),
+      googleSheets: Boolean(googleSheetsUrl && googleSheetsToken),
+      googleSheetsLastSync: lastGoogleSheetsSync || null,
+      googleSheetsError: lastGoogleSheetsError || null
+    });
+  }
   if (req.method === "GET" && url.pathname === "/api/bookings") return sendJson(res, 200, await readBookings());
-  if (req.method === "POST" && url.pathname === "/api/bookings") return sendJson(res, 201, await saveBooking(await parseBody(req)));
+  if (req.method === "POST" && url.pathname === "/api/bookings") {
+    const saved = await saveBooking(await parseBody(req));
+    await syncGoogleSheetsSafe();
+    return sendJson(res, 201, saved);
+  }
   if (req.method === "PUT" && url.pathname.startsWith("/api/bookings/")) {
     const id = decodeURIComponent(url.pathname.split("/").pop());
-    return sendJson(res, 200, await saveBooking({ ...(await parseBody(req)), id }));
+    const saved = await saveBooking({ ...(await parseBody(req)), id });
+    await syncGoogleSheetsSafe();
+    return sendJson(res, 200, saved);
   }
   if (req.method === "DELETE" && url.pathname.startsWith("/api/bookings/")) {
     await deleteBooking(decodeURIComponent(url.pathname.split("/").pop()));
+    await syncGoogleSheetsSafe();
     return sendJson(res, 200, { ok: true });
+  }
+  if (req.method === "POST" && url.pathname === "/api/sync-google-sheets") {
+    const synced = await syncGoogleSheetsSafe();
+    return sendJson(res, synced ? 200 : 503, {
+      ok: synced,
+      error: lastGoogleSheetsError || null
+    });
   }
   if (req.method === "GET" && url.pathname === "/api/vins") return sendJson(res, 200, vinMaster(await readBookings()));
   if (req.method === "GET" && url.pathname === "/api/export.csv") {
@@ -180,6 +242,7 @@ async function handleApi(req, res) {
 
 async function start() {
   await initDb();
+  await syncGoogleSheetsSafe();
   http.createServer((req, res) => {
     if (req.url.startsWith("/api/")) {
       handleApi(req, res).catch((error) => sendJson(res, 500, { error: error.message }));

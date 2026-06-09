@@ -7,7 +7,7 @@ const root = __dirname;
 const publicDir = path.join(root, "public");
 const dataPath = path.join(root, "data", "bookings.json");
 const port = Number(process.env.PORT || 8080);
-const googleSheetsUrl = String(process.env.GOOGLE_SHEETS_WEB_APP_URL || "").trim();
+const googleSheetsUrl = "https://script.google.com/macros/s/AKfycbwQbhicTgEEG1KyKWummdsP7X56o2RYGLNaXF1xelAF_8EUZEAllsRPB3Ji1R0i86P0/exec";
 const googleSheetsToken = String(process.env.GOOGLE_SHEETS_SYNC_TOKEN || "").trim();
 const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL, ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false } })
@@ -97,7 +97,7 @@ async function syncGoogleSheets() {
     })
   });
   const responseText = await response.text();
-  if (!response.ok) throw new Error(`Google Sheets returned ${response.status}: ${responseText}`);
+  if (!response.ok) throw new Error(`Google Sheets returned ${response.status}: ${responseText.replace(/\s+/g, " ").slice(0, 240)}`);
   let result;
   try {
     result = JSON.parse(responseText);

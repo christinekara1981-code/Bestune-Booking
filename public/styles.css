@@ -240,6 +240,10 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 .swatch { width: 14px; height: 14px; display: inline-block; margin-right: 6px; }
 .bar-track { height: 12px; background: #eef4e9; }
 .bar-fill { height: 100%; background: var(--green); }
+.advisor-status-track { display: flex; overflow: hidden; }
+.bar-completed { background: #087a35; }
+.bar-remaining { background: #86c52a; }
+.bar-label b { color: #087a35; }
 
 .booking-card, .vin-card {
   border: 1px solid var(--line);

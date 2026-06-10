@@ -255,11 +255,11 @@ function applyFilter() {
 
 function renderKpis() {
   const rows = state.filtered;
-  const upcoming = rows.filter((booking) => booking.bookingDate >= todayKey() && booking.status !== "Cancelled").length;
+  const todaysBookings = rows.filter((booking) => booking.bookingDate === todayKey()).length;
   const next = [...rows].filter((booking) => booking.bookingDate >= todayKey()).sort(bySchedule)[0];
   const cards = [
     ["Total bookings", rows.length],
-    ["Upcoming", upcoming],
+    ["Today's total bookings", todaysBookings],
     ["Booked", rows.filter((booking) => booking.status === "Booked").length],
     ["Unique VIN", vinMaster(rows).length],
     ["Next booking", next ? `${prettyDate(next.bookingDate)} ${prettyTime(next.bookingTime)}` : "None"]
@@ -312,9 +312,24 @@ function renderStatus() {
 function renderAdvisors() {
   const counts = advisorCounts(state.filtered);
   const max = Math.max(1, ...Object.values(counts));
-  els.advisorBars.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => `
-    <div><div class="bar-label"><strong>${escapeHtml(name)}</strong><span>${count}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(count / max) * 100}%"></div></div></div>
-  `).join("");
+  els.advisorBars.innerHTML = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, count]) => {
+    const completed = state.filtered.filter((booking) =>
+      (booking.serviceAdvisor || "Unassigned") === name &&
+      String(booking.status || "").trim().toLowerCase() === "completed"
+    ).length;
+    const remaining = count - completed;
+    return `
+      <div>
+        <div class="bar-label">
+          <strong>${escapeHtml(name)}</strong>
+          <span>${count} total · <b>${completed} completed</b></span>
+        </div>
+        <div class="bar-track advisor-status-track" style="width:${(count / max) * 100}%">
+          <div class="bar-fill bar-completed" style="width:${count ? (completed / count) * 100 : 0}%"></div>
+          <div class="bar-fill bar-remaining" style="width:${count ? (remaining / count) * 100 : 0}%"></div>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 function renderCalendarList() {

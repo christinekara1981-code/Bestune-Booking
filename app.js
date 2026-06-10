@@ -320,11 +320,15 @@ function renderAdvisors() {
 function renderCalendarList() {
   const rows = [...state.bookings].filter((booking) => !state.selectedDate || booking.bookingDate === state.selectedDate).sort(bySchedule);
   els.calendarCount.textContent = state.selectedDate ? `${rows.length} entries on ${prettyDate(state.selectedDate)}` : `${rows.length} entries`;
-  els.calendarList.innerHTML = rows.map((booking) => `<article class="booking-card">
-    <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
-    <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
-    <span>${escapeHtml(booking.serviceAdvisor)}</span><span class="badge">${escapeHtml(booking.status)}</span>
-  </article>`).join("");
+  els.calendarList.innerHTML = rows.map((booking) => {
+    const completed = String(booking.status || "").trim().toLowerCase() === "completed";
+    return `<article class="booking-card ${completed ? "booking-card-completed" : ""}">
+      <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
+      <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
+      <span>${escapeHtml(booking.serviceAdvisor)}</span>
+      <span class="badge ${completed ? "badge-completed" : ""}">${escapeHtml(booking.status)}</span>
+    </article>`;
+  }).join("");
 }
 
 function renderBookings() {

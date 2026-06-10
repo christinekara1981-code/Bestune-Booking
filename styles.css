@@ -261,6 +261,25 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   align-items: center;
 }
 
+.booking-card-completed {
+  border: 2px solid #11823b;
+  border-left-width: 8px;
+  background: #b9e8c8;
+  color: #083f20;
+}
+
+.booking-card-completed > div > strong {
+  color: #075c2b;
+}
+
+.badge-completed {
+  background: #087a35;
+  color: #ffffff;
+  padding: 6px 8px;
+  text-align: center;
+  font-weight: 700;
+}
+
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
 table { width: 100%; min-width: 1120px; border-collapse: collapse; background: #fff; }
 th, td { border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; }

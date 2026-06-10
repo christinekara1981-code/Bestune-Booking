@@ -201,6 +201,13 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   text-overflow: ellipsis;
 }
 
+.event-completed {
+  border-left-color: #168447;
+  background: #dff3e5;
+  color: #125b34;
+  font-weight: 700;
+}
+
 .chart-wrap {
   display: grid;
   grid-template-columns: 150px 1fr;
@@ -252,6 +259,25 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   grid-template-columns: 150px 1fr 130px 110px;
   gap: 10px;
   align-items: center;
+}
+
+.booking-card-completed {
+  border: 2px solid #11823b;
+  border-left-width: 8px;
+  background: #b9e8c8;
+  color: #083f20;
+}
+
+.booking-card-completed > div > strong {
+  color: #075c2b;
+}
+
+.badge-completed {
+  background: #087a35;
+  color: #ffffff;
+  padding: 6px 8px;
+  text-align: center;
+  font-weight: 700;
 }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
@@ -338,6 +364,11 @@ footer {
   .kpi strong { font-size: 24px; }
   .day { min-height: 72px; padding: 5px; }
   .event { display: none; }
+  .event.event-completed {
+    display: block;
+    padding: 3px;
+    font-size: 10px;
+  }
   .calendar-grid, .weekdays { font-size: 12px; }
   .toolbar button { width: 100%; }
   .table-wrap { display: none; }

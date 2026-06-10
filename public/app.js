@@ -30,6 +30,7 @@ const state = {
 };
 const apiMode = location.protocol.startsWith("http");
 const autoRefreshMs = 5000;
+let bookingSubmitInProgress = false;
 
 const $ = (selector) => document.querySelector(selector);
 const els = {
@@ -283,7 +284,12 @@ function renderCalendar() {
     const events = (byDay[key] || []).sort(bySchedule);
     return `<button class="day ${day.getMonth() === month ? "" : "outside"}" data-date="${key}" type="button">
       <span class="day-number"><span>${day.getDate()}</span>${events.length ? `<span class="badge">${events.length}</span>` : ""}</span>
-      ${events.slice(0, 3).map((event) => `<span class="event">${prettyTime(event.bookingTime)} ${escapeHtml(event.customerName)}</span>`).join("")}
+      ${events.slice(0, 3).map((event) => {
+        const completed = String(event.status || "").toLowerCase() === "completed";
+        return `<span class="event ${completed ? "event-completed" : ""}">
+          ${prettyTime(event.bookingTime)} ${escapeHtml(event.customerName)}${completed ? " - Completed" : ""}
+        </span>`;
+      }).join("")}
     </button>`;
   }).join("");
 }
@@ -314,11 +320,15 @@ function renderAdvisors() {
 function renderCalendarList() {
   const rows = [...state.bookings].filter((booking) => !state.selectedDate || booking.bookingDate === state.selectedDate).sort(bySchedule);
   els.calendarCount.textContent = state.selectedDate ? `${rows.length} entries on ${prettyDate(state.selectedDate)}` : `${rows.length} entries`;
-  els.calendarList.innerHTML = rows.map((booking) => `<article class="booking-card">
-    <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
-    <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
-    <span>${escapeHtml(booking.serviceAdvisor)}</span><span class="badge">${escapeHtml(booking.status)}</span>
-  </article>`).join("");
+  els.calendarList.innerHTML = rows.map((booking) => {
+    const completed = String(booking.status || "").trim().toLowerCase() === "completed";
+    return `<article class="booking-card ${completed ? "booking-card-completed" : ""}">
+      <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
+      <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
+      <span>${escapeHtml(booking.serviceAdvisor)}</span>
+      <span class="badge ${completed ? "badge-completed" : ""}">${escapeHtml(booking.status)}</span>
+    </article>`;
+  }).join("");
 }
 
 function renderBookings() {
@@ -450,17 +460,31 @@ async function deleteVin(vin) {
 
 async function addBooking(event) {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(els.form).entries());
-  const vin = data.chassisNumber.trim().toUpperCase();
-  const exists = state.bookings.some((booking) => booking.chassisNumber === vin);
-  const saved = await persistBooking({ id: String(Date.now()), ...data, chassisNumber: vin, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-  state.bookings.push(saved);
-  els.form.reset();
-  els.form.elements.inquiryDate.value = todayKey();
-  els.form.elements.job.value = "Service";
-  els.formMessage.textContent = exists ? "Saved under existing VIN history." : "Booking saved.";
-  render();
-  showView("dashboard");
+  if (bookingSubmitInProgress) return;
+  bookingSubmitInProgress = true;
+  const submitButton = els.form.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.textContent = "Saving...";
+  try {
+    const data = Object.fromEntries(new FormData(els.form).entries());
+    const vin = data.chassisNumber.trim().toUpperCase();
+    const exists = state.bookings.some((booking) => booking.chassisNumber === vin);
+    const saved = await persistBooking({ id: String(Date.now()), ...data, chassisNumber: vin, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    const savedIndex = state.bookings.findIndex((booking) => booking.id === saved.id);
+    if (savedIndex === -1) state.bookings.push(saved);
+    else state.bookings[savedIndex] = saved;
+    state.lastRemoteSignature = bookingsSignature(state.bookings);
+    els.form.reset();
+    els.form.elements.inquiryDate.value = todayKey();
+    els.form.elements.job.value = "Service";
+    els.formMessage.textContent = exists ? "Saved under existing VIN history." : "Booking saved.";
+    render();
+    showView("dashboard");
+  } finally {
+    bookingSubmitInProgress = false;
+    submitButton.disabled = false;
+    submitButton.textContent = "Save booking";
+  }
 }
 
 function showVinWarning() {

@@ -284,7 +284,12 @@ function renderCalendar() {
     const events = (byDay[key] || []).sort(bySchedule);
     return `<button class="day ${day.getMonth() === month ? "" : "outside"}" data-date="${key}" type="button">
       <span class="day-number"><span>${day.getDate()}</span>${events.length ? `<span class="badge">${events.length}</span>` : ""}</span>
-      ${events.slice(0, 3).map((event) => `<span class="event">${prettyTime(event.bookingTime)} ${escapeHtml(event.customerName)}</span>`).join("")}
+      ${events.slice(0, 3).map((event) => {
+        const completed = String(event.status || "").toLowerCase() === "completed";
+        return `<span class="event ${completed ? "event-completed" : ""}">
+          ${prettyTime(event.bookingTime)} ${escapeHtml(event.customerName)}${completed ? " - Completed" : ""}
+        </span>`;
+      }).join("")}
     </button>`;
   }).join("");
 }

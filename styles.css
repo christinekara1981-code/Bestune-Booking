@@ -201,6 +201,13 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   text-overflow: ellipsis;
 }
 
+.event-completed {
+  border-left-color: #168447;
+  background: #dff3e5;
+  color: #125b34;
+  font-weight: 700;
+}
+
 .chart-wrap {
   display: grid;
   grid-template-columns: 150px 1fr;
@@ -338,6 +345,11 @@ footer {
   .kpi strong { font-size: 24px; }
   .day { min-height: 72px; padding: 5px; }
   .event { display: none; }
+  .event.event-completed {
+    display: block;
+    padding: 3px;
+    font-size: 10px;
+  }
   .calendar-grid, .weekdays { font-size: 12px; }
   .toolbar button { width: 100%; }
   .table-wrap { display: none; }

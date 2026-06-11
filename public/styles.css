@@ -311,7 +311,7 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 
 .calendar-status-editor {
   display: grid;
-  grid-template-columns: minmax(110px, 1fr) auto;
+  grid-template-columns: minmax(110px, 1fr);
   gap: 6px;
   align-items: center;
 }
@@ -324,10 +324,13 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 }
 
 .calendar-status-message {
-  grid-column: 1 / -1;
   min-height: 14px;
   color: var(--muted);
   font-size: 11px;
+}
+
+.save-calendar-status {
+  width: 100%;
 }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); }

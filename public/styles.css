@@ -309,6 +309,27 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   font-weight: 700;
 }
 
+.calendar-status-editor {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.calendar-status-select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 7px;
+}
+
+.calendar-status-message {
+  grid-column: 1 / -1;
+  min-height: 14px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
 table { width: 100%; min-width: 1120px; border-collapse: collapse; background: #fff; }
 th, td { border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; }

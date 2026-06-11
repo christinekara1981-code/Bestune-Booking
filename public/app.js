@@ -136,7 +136,7 @@ function bookingsSignature(bookings) {
 function userIsEditing() {
   const active = document.activeElement;
   if (active && ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName)) return true;
-  return [...document.querySelectorAll(".row-message, .remarks-message")].some((node) => node.textContent.trim() === "Unsaved");
+  return [...document.querySelectorAll(".row-message, .remarks-message, .calendar-status-message")].some((node) => node.textContent.trim() === "Unsaved");
 }
 
 async function refreshFromServer({ force = false } = {}) {
@@ -346,13 +346,42 @@ function renderCalendarList() {
   els.calendarCount.textContent = state.selectedDate ? `${rows.length} entries on ${prettyDate(state.selectedDate)}` : `${rows.length} entries`;
   els.calendarList.innerHTML = rows.map((booking) => {
     const completed = String(booking.status || "").trim().toLowerCase() === "completed";
-    return `<article class="booking-card ${completed ? "booking-card-completed" : ""}">
+    return `<article class="booking-card ${completed ? "booking-card-completed" : ""}" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
       <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
       <span>${escapeHtml(booking.serviceAdvisor)}</span>
-      <span class="badge ${completed ? "badge-completed" : ""}">${escapeHtml(booking.status)}</span>
+      <div class="calendar-status-editor">
+        <select class="calendar-status-select" aria-label="Booking status">${options(statusValues, booking.status)}</select>
+        <button class="save-calendar-status" type="button">Save</button>
+        <span class="calendar-status-message"></span>
+      </div>
     </article>`;
   }).join("");
+}
+
+async function saveCalendarStatus(card) {
+  const booking = state.bookings.find((item) => item.id === card.dataset.id);
+  if (!booking) return;
+  const button = card.querySelector(".save-calendar-status");
+  const message = card.querySelector(".calendar-status-message");
+  button.disabled = true;
+  message.textContent = "Saving...";
+  try {
+    const updated = {
+      ...booking,
+      status: card.querySelector(".calendar-status-select").value,
+      updatedAt: new Date().toISOString()
+    };
+    const saved = await persistBooking(updated);
+    const index = state.bookings.findIndex((item) => item.id === saved.id);
+    if (index !== -1) state.bookings[index] = saved;
+    state.lastRemoteSignature = bookingsSignature(state.bookings);
+    render();
+    showView("calendar");
+  } catch (error) {
+    button.disabled = false;
+    message.textContent = error.message || "Save failed";
+  }
 }
 
 function renderBookings() {
@@ -639,6 +668,15 @@ els.calendarGrid.addEventListener("click", (event) => {
   state.selectedDate = day.dataset.date;
   renderCalendarList();
   showView("calendar");
+});
+els.calendarList.addEventListener("click", (event) => {
+  if (!event.target.classList.contains("save-calendar-status")) return;
+  const card = event.target.closest(".booking-card");
+  saveCalendarStatus(card).catch((error) => alert(error.message));
+});
+els.calendarList.addEventListener("change", (event) => {
+  if (!event.target.classList.contains("calendar-status-select")) return;
+  event.target.closest(".booking-card").querySelector(".calendar-status-message").textContent = "Unsaved";
 });
 els.search.addEventListener("input", render);
 els.statusLegend.addEventListener("click", (event) => {

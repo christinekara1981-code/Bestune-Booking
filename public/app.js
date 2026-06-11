@@ -26,6 +26,8 @@ const state = {
   view: "dashboard",
   calendarDate: new Date(2026, 5, 1),
   selectedDate: "",
+  vinStatusFilter: "",
+  statusChartEntries: [],
   lastRemoteSignature: ""
 };
 const apiMode = location.protocol.startsWith("http");
@@ -296,6 +298,7 @@ function renderCalendar() {
 
 function renderStatus() {
   const entries = Object.entries(statusCounts(state.filtered)).sort((a, b) => b[1] - a[1]);
+  state.statusChartEntries = entries;
   const total = Math.max(1, entries.reduce((sum, [, value]) => sum + value, 0));
   const colors = ["#86c52a", "#2f6f4e", "#7f8c8d", "#f2b84b", "#d95d39", "#4b6cb7"];
   let pos = 0;
@@ -306,7 +309,13 @@ function renderStatus() {
   });
   els.statusChart.style.background = entries.length ? `conic-gradient(${segments.join(", ")})` : "#eef4e9";
   els.statusChart.innerHTML = `<strong>${total}</strong>`;
-  els.statusLegend.innerHTML = entries.map(([name, count], index) => `<div class="legend-row"><span><i class="swatch" style="background:${colors[index % colors.length]}"></i>${escapeHtml(name)}</span><strong>${count}</strong></div>`).join("");
+  els.statusChart.classList.toggle("status-chart-clickable", entries.length > 0);
+  els.statusChart.title = entries.length ? "Click a status segment to open its VIN master list" : "";
+  els.statusLegend.innerHTML = entries.map(([name, count], index) => `
+    <button class="legend-row status-filter-button" data-status="${escapeHtml(name)}" type="button">
+      <span><i class="swatch" style="background:${colors[index % colors.length]}"></i>${escapeHtml(name)}</span>
+      <strong>${count}</strong>
+    </button>`).join("");
 }
 
 function renderAdvisors() {
@@ -381,9 +390,20 @@ function renderBookings() {
 }
 
 function renderVins() {
-  const vehicles = vinMaster(state.filtered);
-  els.vinCount.textContent = `${vehicles.length} unique VIN records`;
-  els.vinRows.innerHTML = vehicles.map((vehicle) => `<article class="vin-card" data-vin="${escapeHtml(vehicle.chassisNumber)}">
+  const status = state.vinStatusFilter.trim().toLowerCase();
+  const filteredBookings = status
+    ? state.filtered.filter((booking) => String(booking.status || "").trim().toLowerCase() === status)
+    : state.filtered;
+  const vehicles = vinMaster(filteredBookings);
+  els.vinCount.textContent = status
+    ? `${vehicles.length} unique VIN records with ${state.vinStatusFilter} status`
+    : `${vehicles.length} unique VIN records`;
+  const statusFilter = status ? `
+    <div class="vin-status-filter">
+      <span>Showing only <strong>${escapeHtml(state.vinStatusFilter)}</strong> vehicles</span>
+      <button id="clearVinStatusFilter" type="button">Clear status filter</button>
+    </div>` : "";
+  els.vinRows.innerHTML = statusFilter + vehicles.map((vehicle) => `<article class="vin-card" data-vin="${escapeHtml(vehicle.chassisNumber)}">
     <div class="vin-title-row">
       <div>
         <h2>${escapeHtml(vehicle.chassisNumber)}</h2>
@@ -400,6 +420,33 @@ function renderVins() {
       <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks" type="button">Save remarks</button><button class="delete-history-row" type="button">Delete booking</button><span class="remarks-message"></span></div>
     </div>`).join("")}
   </article>`).join("");
+}
+
+function openVinStatus(status) {
+  state.vinStatusFilter = status;
+  els.search.value = "";
+  applyFilter();
+  renderVins();
+  showView("vins");
+}
+
+function statusFromChartPoint(event) {
+  const entries = state.statusChartEntries;
+  const total = entries.reduce((sum, [, count]) => sum + count, 0);
+  if (!entries.length || !total) return "";
+  const rect = els.statusChart.getBoundingClientRect();
+  const x = event.clientX - rect.left - rect.width / 2;
+  const y = event.clientY - rect.top - rect.height / 2;
+  const distance = Math.sqrt((x * x) + (y * y));
+  if (distance < rect.width * 0.29 || distance > rect.width / 2) return "";
+  const angle = (Math.atan2(x, -y) * 180 / Math.PI + 360) % 360;
+  const target = angle / 360 * total;
+  let position = 0;
+  for (const [name, count] of entries) {
+    position += count;
+    if (target <= position) return name;
+  }
+  return entries[entries.length - 1][0];
 }
 
 function render() {
@@ -594,6 +641,14 @@ els.calendarGrid.addEventListener("click", (event) => {
   showView("calendar");
 });
 els.search.addEventListener("input", render);
+els.statusLegend.addEventListener("click", (event) => {
+  const button = event.target.closest(".status-filter-button");
+  if (button) openVinStatus(button.dataset.status);
+});
+els.statusChart.addEventListener("click", (event) => {
+  const status = statusFromChartPoint(event);
+  if (status) openVinStatus(status);
+});
 $("#saveAll").addEventListener("click", () => saveAllRows().catch((error) => alert(error.message)));
 $("#refreshData").addEventListener("click", () => manualRefresh().catch((error) => alert(error.message)));
 $("#loadMaster").addEventListener("click", () => loadMasterList().catch((error) => alert(error.message)));
@@ -605,6 +660,7 @@ els.form.elements.chassisNumber.addEventListener("input", showVinWarning);
 els.bookingRows.addEventListener("click", (event) => {
   const row = event.target.closest("tr");
   if (event.target.classList.contains("open-vin")) {
+    state.vinStatusFilter = "";
     els.search.value = event.target.dataset.vin;
     render();
     showView("vins");
@@ -620,6 +676,7 @@ els.mobileBookingCards.addEventListener("click", (event) => {
   const row = event.target.closest(".mobile-edit-card");
   if (!row) return;
   if (event.target.classList.contains("open-vin")) {
+    state.vinStatusFilter = "";
     els.search.value = event.target.dataset.vin;
     render();
     showView("vins");
@@ -632,6 +689,11 @@ els.mobileBookingCards.addEventListener("change", (event) => {
   event.target.closest(".mobile-edit-card").querySelector(".row-message").textContent = "Unsaved";
 });
 els.vinRows.addEventListener("click", async (event) => {
+  if (event.target.id === "clearVinStatusFilter") {
+    state.vinStatusFilter = "";
+    renderVins();
+    return;
+  }
   if (event.target.classList.contains("delete-vin")) {
     deleteVin(event.target.dataset.vin).catch((error) => alert(error.message));
     return;

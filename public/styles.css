@@ -234,9 +234,24 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 }
 
 .donut strong { position: relative; z-index: 1; font-size: 28px; }
+.status-chart-clickable { cursor: pointer; }
+.status-chart-clickable:hover { outline: 3px solid #d8e8ca; outline-offset: 3px; }
 
 .legend, .bars, .list, .vin-list { display: grid; gap: 8px; }
 .legend-row, .bar-label { display: flex; justify-content: space-between; gap: 10px; }
+.status-filter-button {
+  width: 100%;
+  border: 1px solid transparent;
+  background: #fff;
+  color: inherit;
+  padding: 8px;
+  text-align: left;
+}
+.status-filter-button:hover,
+.status-filter-button:focus-visible {
+  border-color: var(--green);
+  background: #f2f7ee;
+}
 .swatch { width: 14px; height: 14px; display: inline-block; margin-right: 6px; }
 .bar-track { height: 12px; background: #eef4e9; }
 .bar-fill { height: 100%; background: var(--green); }
@@ -249,6 +264,16 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   border: 1px solid var(--line);
   background: #fbfdf9;
   padding: 12px;
+}
+
+.vin-status-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border-left: 5px solid var(--green);
+  background: #e8f5dc;
+  padding: 10px 12px;
 }
 
 .vin-title-row {

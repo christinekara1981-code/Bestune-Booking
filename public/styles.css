@@ -283,6 +283,12 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   align-items: flex-start;
 }
 
+.vin-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 140px;
+}
+
 .booking-card {
   display: grid;
   grid-template-columns: 150px 1fr 130px 110px;
@@ -427,7 +433,7 @@ footer {
   .table-wrap { display: none; }
   .mobile-booking-cards { display: grid; }
   .mobile-edit-card label { color: var(--muted); font-size: 13px; }
-  .save-row, .open-vin, .delete-row, .delete-vin, .delete-history-row { min-height: 42px; }
+  .save-row, .open-vin, .delete-row, .delete-vin, .new-booking-vin, .delete-history-row { min-height: 42px; }
   .vin-card { overflow-wrap: anywhere; }
   footer { padding: 14px 10px; }
 }

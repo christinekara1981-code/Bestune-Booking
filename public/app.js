@@ -439,7 +439,10 @@ function renderVins() {
         <p>${escapeHtml(vehicle.latest.customerName || "")} | ${escapeHtml(vehicle.latest.contactNumber || "-")} | Reg. ${escapeHtml(vehicle.latest.registrationNumber || "-")}</p>
         <span class="badge">${vehicle.total} service booking${vehicle.total === 1 ? "" : "s"}</span>
       </div>
-      <button class="delete-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}" type="button">Delete VIN</button>
+      <div class="vin-actions">
+        <button class="new-booking-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}" type="button">New booking</button>
+        <button class="delete-vin" data-vin="${escapeHtml(vehicle.chassisNumber)}" type="button">Delete VIN</button>
+      </div>
     </div>
     ${vehicle.history.map((booking) => `<div class="history-row" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)} ${prettyTime(booking.bookingTime)}</strong>
@@ -476,6 +479,32 @@ function statusFromChartPoint(event) {
     if (target <= position) return name;
   }
   return entries[entries.length - 1][0];
+}
+
+function latestBookingForVin(vin) {
+  const rows = state.bookings.filter((booking) =>
+    String(booking.chassisNumber || "").trim().toUpperCase() === String(vin || "").trim().toUpperCase()
+  ).sort(bySchedule);
+  return rows[rows.length - 1] || null;
+}
+
+function createBookingForVin(vin) {
+  const latest = latestBookingForVin(vin);
+  if (!latest) return;
+  els.form.reset();
+  els.form.elements.inquiryDate.value = todayKey();
+  els.form.elements.customerName.value = latest.customerName || "";
+  els.form.elements.contactNumber.value = latest.contactNumber || "";
+  els.form.elements.chassisNumber.value = latest.chassisNumber || vin;
+  els.form.elements.registrationNumber.value = latest.registrationNumber || "";
+  els.form.elements.job.value = latest.job || "Service";
+  els.form.elements.serviceAdvisor.value = latest.serviceAdvisor || "";
+  els.form.elements.paymentMode.value = latest.paymentMode || "";
+  els.form.elements.status.value = "Booked";
+  els.form.elements.remarks.value = "";
+  els.formMessage.textContent = `Creating a new booking for VIN ${latest.chassisNumber || vin}.`;
+  showVinWarning();
+  showView("form");
 }
 
 function render() {
@@ -730,6 +759,10 @@ els.vinRows.addEventListener("click", async (event) => {
   if (event.target.id === "clearVinStatusFilter") {
     state.vinStatusFilter = "";
     renderVins();
+    return;
+  }
+  if (event.target.classList.contains("new-booking-vin")) {
+    createBookingForVin(event.target.dataset.vin);
     return;
   }
   if (event.target.classList.contains("delete-vin")) {

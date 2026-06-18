@@ -1,6 +1,6 @@
 const storageKey = "bestuneBookingsGithub";
 const deletePassword = "Bestune@2026";
-const statusValues = ["Booked", "Confirmed", "Arrived", "Not Arrived", "Completed", "Cancelled", "Rescheduled"];
+const statusValues = ["Booked", "Confirmed", "Arrived", "Not Arrived", "No Show", "Completed", "Cancelled", "Rescheduled"];
 const paymentValues = ["Cash", "Payment link", "Card", "Under service contract"];
 const advisorValues = ["Heba", "Kaoutar", "Rana"];
 

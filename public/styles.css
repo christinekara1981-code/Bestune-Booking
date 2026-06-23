@@ -331,7 +331,8 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 .calendar-status-select,
 .calendar-job-select,
 .calendar-date-input,
-.calendar-time-input {
+.calendar-time-input,
+.calendar-contact-input {
   width: 100%;
   border: 1px solid var(--line);
   background: #fff;

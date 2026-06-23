@@ -354,8 +354,11 @@ function renderCalendarList() {
       <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
       <span>${escapeHtml(booking.serviceAdvisor)}</span>
       <div class="calendar-status-editor">
-        <select class="calendar-status-select" aria-label="Booking status">${options(statusValues, booking.status)}</select>
-        <button class="save-calendar-status" type="button">Save</button>
+        <label>Date<input class="calendar-date-input" type="date" value="${escapeHtml(booking.bookingDate || "")}"></label>
+        <label>Time<input class="calendar-time-input" type="time" value="${escapeHtml(booking.bookingTime || "")}"></label>
+        <label>Job<select class="calendar-job-select">${options(jobValues, booking.job || "")}</select></label>
+        <label>Status<select class="calendar-status-select">${options(statusValues, booking.status)}</select></label>
+        <button class="save-calendar-status" type="button">Save changes</button>
         <span class="calendar-status-message"></span>
       </div>
     </article>`;
@@ -370,11 +373,14 @@ async function saveCalendarStatus(card) {
   button.disabled = true;
   message.textContent = "Saving...";
   try {
-    const updated = {
-      ...booking,
-      status: card.querySelector(".calendar-status-select").value,
-      updatedAt: new Date().toISOString()
-    };
+  const updated = {
+    ...booking,
+    bookingDate: card.querySelector(".calendar-date-input").value,
+    bookingTime: card.querySelector(".calendar-time-input").value,
+    job: card.querySelector(".calendar-job-select").value,
+    status: card.querySelector(".calendar-status-select").value,
+    updatedAt: new Date().toISOString()
+  };
     const saved = await persistBooking(updated);
     const index = state.bookings.findIndex((item) => item.id === saved.id);
     if (index !== -1) state.bookings[index] = saved;
@@ -716,7 +722,7 @@ els.calendarList.addEventListener("click", (event) => {
   saveCalendarStatus(card).catch((error) => alert(error.message));
 });
 els.calendarList.addEventListener("change", (event) => {
-  if (!event.target.classList.contains("calendar-status-select")) return;
+  if (!event.target.matches(".calendar-date-input, .calendar-time-input, .calendar-job-select, .calendar-status-select")) return;
   event.target.closest(".booking-card").querySelector(".calendar-status-message").textContent = "Unsaved";
 });
 els.search.addEventListener("input", render);

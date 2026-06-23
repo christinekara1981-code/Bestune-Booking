@@ -92,6 +92,7 @@
                   <th>Contact</th>
                   <th>VIN</th>
                   <th>Reg.</th>
+                  <th>Job</th>
                   <th>Advisor</th>
                   <th>Payment</th>
                   <th>Status</th>
@@ -123,7 +124,16 @@
             <label>VIN / chassis<input name="chassisNumber" required></label>
             <div id="vinWarning" class="warning wide" hidden></div>
             <label>Registration<input name="registrationNumber"></label>
-            <label>Job<input name="job" value="Service" required></label>
+            <label>Job
+              <select name="job" required>
+                <option>Minor Service</option>
+                <option>Major Service</option>
+                <option>Accident Repair</option>
+                <option>Electrical Repairs</option>
+                <option>Mechanical Repairs</option>
+                <option>Other Repairs</option>
+              </select>
+            </label>
             <label>Service advisor
               <select name="serviceAdvisor" required>
                 <option value="">Select advisor</option>

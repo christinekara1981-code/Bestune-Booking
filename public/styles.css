@@ -340,11 +340,11 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 }
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
-table { width: 100%; min-width: 1120px; border-collapse: collapse; background: #fff; }
+table { width: 100%; min-width: 1240px; border-collapse: collapse; background: #fff; }
 th, td { border-bottom: 1px solid var(--line); padding: 9px; text-align: left; vertical-align: top; }
 th { background: #eef4e9; font-size: 12px; text-transform: uppercase; }
 
-.table-input, label input, label select, label textarea, .remarks-input {
+.table-input, label input, label select, label textarea, .remarks-input, .history-job-select {
   width: 100%;
   border: 1px solid var(--line);
   padding: 9px;
@@ -380,7 +380,7 @@ th { background: #eef4e9; font-size: 12px; text-transform: uppercase; }
 
 .history-row {
   display: grid;
-  grid-template-columns: 190px 90px 110px 140px minmax(240px, 1fr);
+  grid-template-columns: 190px 90px 130px 110px 140px minmax(260px, 1fr);
   gap: 8px;
   border-top: 1px solid var(--line);
   padding-top: 8px;
@@ -388,6 +388,11 @@ th { background: #eef4e9; font-size: 12px; text-transform: uppercase; }
 }
 
 .remarks-input { min-height: 56px; resize: vertical; }
+
+.vin-history-editor {
+  display: grid;
+  gap: 8px;
+}
 
 .form-grid {
   display: grid;

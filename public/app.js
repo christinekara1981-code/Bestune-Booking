@@ -1,6 +1,7 @@
 const storageKey = "bestuneBookingsGithub";
 const deletePassword = "Bestune@2026";
 const statusValues = ["Booked", "Confirmed", "Arrived", "Not Arrived", "No Show", "Completed", "Cancelled", "Rescheduled"];
+const jobValues = ["Minor Service", "Major Service", "Accident Repair", "Electrical Repairs", "Mechanical Repairs", "Other Repairs"];
 const paymentValues = ["Cash", "Payment link", "Card", "Under service contract"];
 const advisorValues = ["Heba", "Kaoutar", "Rana"];
 
@@ -213,7 +214,9 @@ async function setupCloudSync() {
 }
 
 function options(values, selected) {
-  return values.map((value) => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("");
+  const normalizedSelected = selected || "";
+  const choices = normalizedSelected && !values.includes(normalizedSelected) ? [normalizedSelected, ...values] : values;
+  return choices.map((value) => `<option value="${escapeHtml(value)}" ${value === normalizedSelected ? "selected" : ""}>${escapeHtml(value)}</option>`).join("");
 }
 
 function advisorCounts(bookings) {
@@ -251,7 +254,7 @@ function applyFilter() {
   const term = els.search.value.trim().toLowerCase();
   state.filtered = !term ? [...state.bookings] : state.bookings.filter((booking) => [
     booking.customerName, booking.contactNumber, booking.chassisNumber,
-    booking.registrationNumber, booking.serviceAdvisor, booking.status, booking.paymentMode
+    booking.registrationNumber, booking.job, booking.serviceAdvisor, booking.status, booking.paymentMode
   ].join(" ").toLowerCase().includes(term));
 }
 
@@ -393,6 +396,7 @@ function renderBookings() {
     <td><input class="table-input" data-field="contactNumber" value="${escapeHtml(booking.contactNumber)}"></td>
     <td><input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"><button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">Open VIN</button></td>
     <td><input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></td>
+    <td><select class="table-input" data-field="job">${options(jobValues, booking.job || "")}</select></td>
     <td><select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></td>
     <td><select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></td>
     <td><select class="table-input" data-field="status">${options(statusValues, booking.status)}</select><button class="save-row" type="button">Save</button><button class="delete-row" type="button">Delete</button><span class="row-message"></span></td>
@@ -409,6 +413,7 @@ function renderBookings() {
     <label>VIN<input class="table-input" data-field="chassisNumber" value="${escapeHtml(booking.chassisNumber)}"></label>
     <button class="open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">Open VIN</button>
     <label>Registration<input class="table-input" data-field="registrationNumber" value="${escapeHtml(booking.registrationNumber || "")}"></label>
+    <label>Job<select class="table-input" data-field="job">${options(jobValues, booking.job || "")}</select></label>
     <label>Advisor<select class="table-input" data-field="serviceAdvisor"><option value="">Select</option>${options(advisorValues, booking.serviceAdvisor || "")}</select></label>
     <label>Payment<select class="table-input" data-field="paymentMode"><option value="">Select</option>${options(paymentValues, booking.paymentMode || "")}</select></label>
     <label>Status<select class="table-input" data-field="status">${options(statusValues, booking.status)}</select></label>
@@ -447,9 +452,16 @@ function renderVins() {
     ${vehicle.history.map((booking) => `<div class="history-row" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)} ${prettyTime(booking.bookingTime)}</strong>
       <span>${escapeHtml(booking.status || "-")}</span>
+      <span>${escapeHtml(booking.job || "-")}</span>
       <span>${escapeHtml(booking.serviceAdvisor || "-")}</span>
       <span>${escapeHtml(booking.paymentMode || "No payment mode")}</span>
-      <div><textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea><button class="save-remarks" type="button">Save remarks</button><button class="delete-history-row" type="button">Delete booking</button><span class="remarks-message"></span></div>
+      <div class="vin-history-editor">
+        <label>Job<select class="history-job-select">${options(jobValues, booking.job || "")}</select></label>
+        <label>Remarks<textarea class="remarks-input" rows="2">${escapeHtml(booking.remarks || "")}</textarea></label>
+        <button class="save-remarks" type="button">Save details</button>
+        <button class="delete-history-row" type="button">Delete booking</button>
+        <span class="remarks-message"></span>
+      </div>
     </div>`).join("")}
   </article>`).join("");
 }
@@ -497,7 +509,7 @@ function createBookingForVin(vin) {
   els.form.elements.contactNumber.value = latest.contactNumber || "";
   els.form.elements.chassisNumber.value = latest.chassisNumber || vin;
   els.form.elements.registrationNumber.value = latest.registrationNumber || "";
-  els.form.elements.job.value = latest.job || "Service";
+  els.form.elements.job.value = jobValues.includes(latest.job) ? latest.job : "Minor Service";
   els.form.elements.serviceAdvisor.value = latest.serviceAdvisor || "";
   els.form.elements.paymentMode.value = latest.paymentMode || "";
   els.form.elements.status.value = "Booked";
@@ -596,7 +608,7 @@ async function addBooking(event) {
     state.lastRemoteSignature = bookingsSignature(state.bookings);
     els.form.reset();
     els.form.elements.inquiryDate.value = todayKey();
-    els.form.elements.job.value = "Service";
+    els.form.elements.job.value = "Minor Service";
     els.formMessage.textContent = exists ? "Saved under existing VIN history." : "Booking saved.";
     render();
     showView("dashboard");
@@ -776,6 +788,7 @@ els.vinRows.addEventListener("click", async (event) => {
   if (!event.target.classList.contains("save-remarks")) return;
   const row = event.target.closest(".history-row");
   const booking = state.bookings.find((item) => item.id === row.dataset.id);
+  booking.job = row.querySelector(".history-job-select").value;
   booking.remarks = row.querySelector(".remarks-input").value.trim();
   booking.updatedAt = new Date().toISOString();
   const saved = await persistBooking(booking);
@@ -785,6 +798,14 @@ els.vinRows.addEventListener("click", async (event) => {
   row.querySelector(".remarks-message").textContent = "Saved";
   render();
   showView("vins");
+});
+els.vinRows.addEventListener("change", (event) => {
+  if (!event.target.classList.contains("history-job-select")) return;
+  event.target.closest(".history-row").querySelector(".remarks-message").textContent = "Unsaved";
+});
+els.vinRows.addEventListener("input", (event) => {
+  if (!event.target.classList.contains("remarks-input")) return;
+  event.target.closest(".history-row").querySelector(".remarks-message").textContent = "Unsaved";
 });
 
 load();

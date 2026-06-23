@@ -307,6 +307,30 @@ h2 { margin: 0 0 10px; font-size: 18px; }
   color: #075c2b;
 }
 
+.calendar-vin-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.calendar-open-vin {
+  border: 0;
+  background: transparent;
+  color: var(--green-dark);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+}
+
+.calendar-open-vin:hover,
+.calendar-open-vin:focus-visible {
+  color: var(--green);
+}
+
 .badge-completed {
   background: #087a35;
   color: #ffffff;

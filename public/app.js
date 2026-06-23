@@ -351,7 +351,14 @@ function renderCalendarList() {
     const completed = String(booking.status || "").trim().toLowerCase() === "completed";
     return `<article class="booking-card ${completed ? "booking-card-completed" : ""}" data-id="${escapeHtml(booking.id)}">
       <strong>${prettyDate(booking.bookingDate)}<br>${prettyTime(booking.bookingTime)}</strong>
-      <div><strong>${escapeHtml(booking.customerName)}</strong><div>${escapeHtml(booking.chassisNumber)} | Reg. ${escapeHtml(booking.registrationNumber || "-")}</div></div>
+      <div>
+        <strong>${escapeHtml(booking.customerName)}</strong>
+        <div class="calendar-vin-links">
+          <button class="calendar-open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">${escapeHtml(booking.chassisNumber)}</button>
+          <span>|</span>
+          <button class="calendar-open-vin" data-vin="${escapeHtml(booking.chassisNumber)}" type="button">Reg. ${escapeHtml(booking.registrationNumber || "-")}</button>
+        </div>
+      </div>
       <span>${escapeHtml(booking.serviceAdvisor)}</span>
       <div class="calendar-status-editor">
         <label>Date<input class="calendar-date-input" type="date" value="${escapeHtml(booking.bookingDate || "")}"></label>
@@ -719,6 +726,13 @@ els.calendarGrid.addEventListener("click", (event) => {
   showView("calendar");
 });
 els.calendarList.addEventListener("click", (event) => {
+  if (event.target.classList.contains("calendar-open-vin")) {
+    state.vinStatusFilter = "";
+    els.search.value = event.target.dataset.vin;
+    render();
+    showView("vins");
+    return;
+  }
   if (!event.target.classList.contains("save-calendar-status")) return;
   const card = event.target.closest(".booking-card");
   saveCalendarStatus(card).catch((error) => alert(error.message));

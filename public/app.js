@@ -86,6 +86,10 @@ function bySchedule(a, b) {
   return `${a.bookingDate || ""} ${a.bookingTime || ""}`.localeCompare(`${b.bookingDate || ""} ${b.bookingTime || ""}`);
 }
 
+function isCancelled(booking) {
+  return String(booking.status || "").trim().toLowerCase() === "cancelled";
+}
+
 function saveLocal() {
   localStorage.setItem(storageKey, JSON.stringify(state.bookings));
   if (cloud.ready && !cloud.applyingRemote) {
@@ -278,7 +282,7 @@ function renderCalendar() {
   els.monthLabel.textContent = state.calendarDate.toLocaleDateString("en-AE", { month: "long", year: "numeric" });
   const first = new Date(year, month, 1);
   const start = new Date(year, month, 1 - first.getDay());
-  const byDay = state.bookings.reduce((acc, booking) => {
+  const byDay = state.bookings.filter((booking) => !isCancelled(booking)).reduce((acc, booking) => {
     (acc[booking.bookingDate] ||= []).push(booking);
     return acc;
   }, {});
@@ -345,7 +349,10 @@ function renderAdvisors() {
 }
 
 function renderCalendarList() {
-  const rows = [...state.bookings].filter((booking) => !state.selectedDate || booking.bookingDate === state.selectedDate).sort(bySchedule);
+  const rows = [...state.bookings]
+    .filter((booking) => !isCancelled(booking))
+    .filter((booking) => !state.selectedDate || booking.bookingDate === state.selectedDate)
+    .sort(bySchedule);
   els.calendarCount.textContent = state.selectedDate ? `${rows.length} entries on ${prettyDate(state.selectedDate)}` : `${rows.length} entries`;
   els.calendarList.innerHTML = rows.map((booking) => {
     const completed = String(booking.status || "").trim().toLowerCase() === "completed";
